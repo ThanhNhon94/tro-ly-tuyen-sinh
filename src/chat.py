@@ -6,7 +6,7 @@ Chat với Trợ lý tuyển sinh ngay trên cửa sổ dòng lệnh.
 """
 import argparse
 
-from ollama_client import OllamaError
+from ollama_client import OllamaError, version_warning
 from rag import Retriever, answer, load_system_prompt
 
 
@@ -15,6 +15,8 @@ def main():
     ap.add_argument("--debug", action="store_true")
     args = ap.parse_args()
 
+    if warn := version_warning():
+        print(f"[Cảnh báo] {warn}\n")
     retriever = Retriever()
     system_prompt = load_system_prompt()
     history = []
@@ -44,7 +46,13 @@ def main():
 
             print("Trợ lý: ", end="", flush=True)
             reply = ""
-            for piece in stream:
+            thinking_shown = False
+            for kind, piece in stream:
+                if kind == "thinking":
+                    if not thinking_shown:
+                        print("(đang suy nghĩ...) ", end="", flush=True)
+                        thinking_shown = True
+                    continue
                 print(piece, end="", flush=True)
                 reply += piece
             print("\n")

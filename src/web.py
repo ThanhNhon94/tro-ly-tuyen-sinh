@@ -13,7 +13,7 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import config
-from ollama_client import OllamaError
+from ollama_client import OllamaError, version_warning
 from rag import Retriever, answer, load_system_prompt
 
 WEB_DIR = config.ROOT / "web"
@@ -56,7 +56,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.path in ("/", "/index.html"):
             self._send(200, (WEB_DIR / "index.html").read_bytes(), "text/html; charset=utf-8")
         elif self.path == "/api/health":
-            self._send(200, json.dumps({"ok": True, "model": config.LLM_MODEL}), "application/json")
+            self._send(200, json.dumps({"ok": True, "model": config.LLM_MODEL,
+                                        "warning": version_warning()}, ensure_ascii=False),
+                       "application/json; charset=utf-8")
         else:
             self._send(404, "Không tìm thấy", "text/plain; charset=utf-8")
 
@@ -84,10 +86,18 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.flush()
 
         try:
+            emit({"type": "status", "stage": "searching"})
             stream, hits = answer(retriever, system_prompt, history, question)
             emit({"type": "sources", "items": [
                 {"label": source_label(c), "score": round(s, 3)} for c, s in hits]})
-            for piece in stream:
+            emit({"type": "status", "stage": "generating"})
+            thinking_sent = False
+            for kind, piece in stream:
+                if kind == "thinking":
+                    if not thinking_sent:
+                        emit({"type": "status", "stage": "thinking"})
+                        thinking_sent = True
+                    continue
                 emit({"type": "delta", "text": piece})
             emit({"type": "done"})
         except OllamaError as e:
@@ -106,6 +116,8 @@ def main():
     ap.add_argument("--no-browser", action="store_true")
     args = ap.parse_args()
 
+    if warn := version_warning():
+        print(f"[Cảnh báo] {warn}")
     retriever = Retriever()
     system_prompt = load_system_prompt()
 

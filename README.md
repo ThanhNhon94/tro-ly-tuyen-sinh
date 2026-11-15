@@ -37,21 +37,25 @@ Thêm trường mới hay cập nhật năm mới chỉ cần nạp thêm tài l
 
 ## Cài đặt và chạy
 
-1. Cài **Python 3.10+** và **Ollama** (https://ollama.com).
-2. Tải model:
+1. Cài **Python 3.10+** (https://www.python.org/downloads/). Trên Windows nhớ tích ô **"Add python.exe to PATH"**.
+2. Cài **Ollama bản 0.9 trở lên** (https://ollama.com/download). Kiểm tra bằng `ollama --version`.
+   Bản cũ hơn không tắt được chế độ "suy nghĩ" của Qwen3 nên trả lời rất chậm.
+3. Tải model (chạy từng lệnh):
    ```bash
-   ollama pull qwen3:8b     # model trả lời
+   ollama pull qwen3:4b     # model trả lời (đổi theo cấu hình máy, xem mục "Chọn model")
    ollama pull bge-m3       # model embedding (tìm kiếm)
    ```
-3. Cài thư viện:
+4. Cài thư viện:
    ```bash
    pip install -r requirements.txt
    ```
-4. Tạo index (chạy 1 lần, và chạy lại mỗi khi thêm tài liệu):
+   Trên Windows, nếu báo `pip is not recognized` thì dùng `py -m pip install -r requirements.txt`,
+   và thay `python` bằng `py` ở các lệnh bên dưới.
+5. Tạo index (chạy 1 lần, và chạy lại mỗi khi thêm tài liệu):
    ```bash
    python src/ingest.py
    ```
-5. Mở giao diện chat:
+6. Mở giao diện chat:
    ```bash
    python src/web.py
    ```
@@ -78,10 +82,13 @@ có nhiều bảng (ngành, tổ hợp, chỉ tiêu, điểm) sẽ cần script 
 
 | Cấu hình máy | Model trả lời (`LLM_MODEL`) | Ghi chú |
 |---|---|---|
-| Chỉ CPU, RAM 8 GB | `qwen3:4b` | Chậm, chất lượng tạm được |
-| RAM 16 GB hoặc GPU 6–8 GB | `qwen3:8b` *(mặc định)* | Cân bằng tốt cho tiếng Việt |
+| Chỉ CPU, RAM 8 GB | `qwen3:1.7b` | Nhanh nhưng dễ trả lời sai, cần kiểm tra kỹ |
+| Chỉ CPU, RAM 16 GB | `qwen3:4b` *(mặc định)* | Mỗi câu khoảng 20–60 giây |
+| GPU rời 8 GB trở lên | `qwen3:8b` | Cân bằng tốt cho tiếng Việt |
 | GPU 16–24 GB | `qwen3:14b` hoặc lớn hơn | Trả lời mượt và chính xác hơn |
 
+- Kiểm tra máy đang chạy bằng CPU hay GPU: trong lúc trợ lý đang trả lời, chạy `ollama ps` và xem cột PROCESSOR.
+- Câu hỏi đầu tiên luôn chậm hơn vì phải nạp model vào RAM. Sau đó model được giữ trong RAM 30 phút (`LLM_KEEP_ALIVE`).
 - Đổi model: sửa `LLM_MODEL` trong `src/config.py`, rồi `ollama pull <tên model>`. Không cần chạy lại `ingest.py`.
 - Embedding: mặc định `bge-m3`. Nếu đổi `EMBED_MODEL` thì **phải** chạy lại `ingest.py`.
 - Sau mỗi lần đổi model, chạy lại các câu trong `docs/test_cases.md` để so sánh.

@@ -40,9 +40,13 @@ def build_user_message(question, hits):
         docs = "\n\n".join(f"[{i}] {c['text']}" for i, (c, _) in enumerate(hits, 1))
     else:
         docs = "(Không tìm thấy đoạn tài liệu nào liên quan đến câu hỏi.)"
-    return (f"<tai_lieu>\n{docs}\n</tai_lieu>\n\n"
-            f"Câu hỏi của người dùng: {question}\n\n"
-            "Hãy trả lời theo đúng các quy tắc đã được giao, chỉ dựa trên <tai_lieu>.")
+    msg = (f"<tai_lieu>\n{docs}\n</tai_lieu>\n\n"
+           f"Câu hỏi của người dùng: {question}\n\n"
+           "Hãy trả lời theo đúng các quy tắc đã được giao, chỉ dựa trên <tai_lieu>.")
+    # Qwen3: "/no_think" tắt chế độ suy nghĩ ngay trong prompt, dùng được cả với Ollama bản cũ
+    if config.LLM_MODEL.startswith("qwen3") and not config.LLM_THINK:
+        msg += " /no_think"
+    return msg
 
 
 def build_messages(system_prompt, history, question, hits):
@@ -55,7 +59,7 @@ def build_messages(system_prompt, history, question, hits):
 
 
 def answer(retriever, system_prompt, history, question):
-    """Trả về (generator chữ trả lời, danh sách đoạn tài liệu đã dùng)."""
+    """Trả về (generator các cặp (loại, nội dung) từ chat_stream, danh sách đoạn tài liệu đã dùng)."""
     hits = retriever.search(question)
     messages = build_messages(system_prompt, history, question, hits)
     return chat_stream(messages), hits

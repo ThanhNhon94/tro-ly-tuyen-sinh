@@ -105,6 +105,13 @@
   .sources summary { cursor: pointer; user-select: none; }
   .sources ul { margin: 6px 0 0; padding-left: 18px; }
 
+  .waiting { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .stage { font-size: 14px; color: var(--muted); }
+  .hint { width: 100%; font-size: 13px; color: var(--muted); }
+  .banner {
+    margin: 12px 20px 0; padding: 10px 14px; border-radius: 12px; font-size: 14px;
+    background: #fff8e6; border: 1px solid #fcd88a; color: #7a4b00;
+  }
   .typing { display: inline-flex; gap: 5px; padding: 6px 2px; }
   .typing span { width: 8px; height: 8px; border-radius: 50%; background: #9aa6c4; animation: blink 1.2s infinite; }
   .typing span:nth-child(2) { animation-delay: .2s; }
@@ -155,6 +162,7 @@
     <button class="new-chat" id="newChat" title="Bắt đầu cuộc trò chuyện mới">↻ <span>Cuộc trò chuyện mới</span></button>
   </header>
 
+  <div class="banner" id="banner" hidden></div>
   <main id="messages" aria-live="polite">
     <section class="welcome" id="welcome">
       <div class="wave">👋</div>
@@ -193,6 +201,7 @@ let busy = false;
 fetch("/api/health").then(r => r.json()).then(d => {
   $("dot").classList.add("on");
   $("status").textContent = "Sẵn sàng hỗ trợ";
+  if (d.warning) { $("banner").textContent = "⚠️ " + d.warning; $("banner").hidden = false; }
 }).catch(() => { $("status").textContent = "Không kết nối được máy chủ"; });
 
 // ---------- Hiển thị Markdown đơn giản ----------
@@ -249,7 +258,7 @@ function addUser(text) {
 function addBot() {
   const el = document.createElement("div");
   el.className = "msg bot";
-  el.innerHTML = `<div class="avatar">${BOT_ICON}</div><div class="bubble"><div class="body"><span class="typing"><span></span><span></span><span></span></span></div></div>`;
+  el.innerHTML = `<div class="avatar">${BOT_ICON}</div><div class="bubble"><div class="body"><div class="waiting"><span class="typing"><span></span><span></span><span></span></span><span class="stage">Đang tìm tài liệu liên quan…</span><span class="hint"></span></div></div></div>`;
   messagesEl.appendChild(el);
   scrollDown();
   return el;
@@ -277,6 +286,22 @@ async function ask(question) {
   const body = botEl.querySelector(".body");
   let reply = "", sources = [];
 
+  // Trạng thái chờ + đồng hồ đếm giây, để người dùng biết trợ lý vẫn đang làm việc
+  const STAGES = {
+    searching: "Đang tìm tài liệu liên quan…",
+    generating: "Đang soạn câu trả lời…",
+    thinking: "Đang suy nghĩ…",
+  };
+  let stage = "searching", started = Date.now();
+  const setWaiting = () => {
+    const st = body.querySelector(".stage"), hint = body.querySelector(".hint");
+    if (!st) return;
+    const sec = Math.round((Date.now() - started) / 1000);
+    st.textContent = STAGES[stage] + (sec >= 3 ? ` (${sec} giây)` : "");
+    if (sec >= 20) hint.textContent = "Máy tính đang xử lý, câu đầu tiên có thể mất 1–2 phút. Anh/chị vui lòng chờ thêm một chút ạ.";
+  };
+  const timer = setInterval(setWaiting, 1000);
+
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
@@ -297,11 +322,12 @@ async function ask(question) {
         const line = buf.slice(0, nl); buf = buf.slice(nl + 1);
         if (!line.trim()) continue;
         const ev = JSON.parse(line);
-        if (ev.type === "sources") sources = ev.items;
+        if (ev.type === "status") { stage = ev.stage; setWaiting(); }
+        else if (ev.type === "sources") sources = ev.items;
         else if (ev.type === "delta") {
           reply += ev.text;
           const shown = renderMarkdown(reply);
-          if (shown) body.innerHTML = shown;
+          if (shown) { clearInterval(timer); body.innerHTML = shown; }
           scrollDown();
         } else if (ev.type === "error") throw new Error(ev.message);
       }
@@ -314,6 +340,7 @@ async function ask(question) {
     botEl.querySelector(".bubble").classList.add("error");
     body.textContent = "Xin lỗi, đã có lỗi xảy ra: " + (err.message || err);
   } finally {
+    clearInterval(timer);
     busy = false; updateSend(); scrollDown(); input.focus();
   }
 }
