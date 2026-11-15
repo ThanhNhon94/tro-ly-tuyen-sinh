@@ -1,0 +1,15 @@
+# Index sinh ra từ ingest.py
+index/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
