@@ -6,6 +6,7 @@ Chat với Trợ lý tuyển sinh ngay trên cửa sổ dòng lệnh.
 """
 import argparse
 
+from ollama_client import OllamaError
 from rag import Retriever, answer, load_system_prompt
 
 
@@ -33,19 +34,23 @@ def main():
             print("(Đã xoá lịch sử hội thoại)\n")
             continue
 
-        stream, hits = answer(retriever, system_prompt, history, q)
-        if args.debug:
-            print("--- Tài liệu tìm được ---")
-            for c, s in hits:
-                print(f"  {s:.3f}  {c['id']}  {c['metadata'].get('tieu_de', '')}")
-            print("------------------------")
+        try:
+            stream, hits = answer(retriever, system_prompt, history, q)
+            if args.debug:
+                print("--- Tài liệu tìm được ---")
+                for c, s in hits:
+                    print(f"  {s:.3f}  {c['id']}  {c['metadata'].get('tieu_de', '')}")
+                print("------------------------")
 
-        print("Trợ lý: ", end="", flush=True)
-        reply = ""
-        for piece in stream:
-            print(piece, end="", flush=True)
-            reply += piece
-        print("\n")
+            print("Trợ lý: ", end="", flush=True)
+            reply = ""
+            for piece in stream:
+                print(piece, end="", flush=True)
+                reply += piece
+            print("\n")
+        except OllamaError as e:
+            print(f"\n[Lỗi] {e}\n")
+            continue
         history += [{"role": "user", "content": q}, {"role": "assistant", "content": reply}]
 
 

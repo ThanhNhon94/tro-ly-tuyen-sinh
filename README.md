@@ -30,6 +30,8 @@ Thêm trường mới hay cập nhật năm mới chỉ cần nạp thêm tài l
 | `src/config.py` | Chọn model, số đoạn tìm kiếm, ngưỡng điểm... |
 | `src/chunk_quyche.py` | Cắt PDF quy chế theo Chương / Mục / Điều |
 | `src/ingest.py` | Tạo vector và lưu index |
+| `src/web.py` | Máy chủ giao diện chat trên trình duyệt |
+| `web/index.html` | Giao diện chat (HTML/CSS/JS, không cần build) |
 | `src/chat.py` | Chat trên cửa sổ dòng lệnh |
 | `index/` | Sinh ra khi chạy `ingest.py` (không đưa lên git) |
 
@@ -45,12 +47,21 @@ Thêm trường mới hay cập nhật năm mới chỉ cần nạp thêm tài l
    ```bash
    pip install -r requirements.txt
    ```
-4. Tạo index rồi chat:
+4. Tạo index (chạy 1 lần, và chạy lại mỗi khi thêm tài liệu):
    ```bash
    python src/ingest.py
-   python src/chat.py --debug
    ```
-   `--debug` in ra các đoạn tài liệu tìm được kèm điểm tương đồng, giúp kiểm tra tìm kiếm có đúng không.
+5. Mở giao diện chat:
+   ```bash
+   python src/web.py
+   ```
+   Trình duyệt tự mở trang **http://localhost:8000**. Phụ huynh và học sinh gõ câu hỏi hoặc bấm câu gợi ý.
+   Mỗi câu trả lời có mục **Nguồn tham khảo** liệt kê các Điều khoản đã dùng.
+
+   - Cho máy khác trong cùng mạng (wifi) dùng chung: `python src/web.py --host 0.0.0.0`,
+     rồi mở `http://<IP-máy-chủ>:8000` trên máy kia.
+   - Bản dòng lệnh để kiểm tra tìm kiếm: `python src/chat.py --debug`
+     (in ra các đoạn tài liệu tìm được kèm điểm tương đồng).
 
 ## Thêm tài liệu mới
 
@@ -83,5 +94,5 @@ có nhiều bảng (ngành, tổ hợp, chỉ tiêu, điểm) sẽ cần script 
 - [ ] Nạp Thông tin tuyển sinh (bảng ngành, tổ hợp, điểm chuẩn)
 - [ ] Thêm trường khác, lọc theo trường khi câu hỏi nêu tên trường
 - [ ] Tìm kiếm kết hợp từ khoá (BM25) cho viết tắt như XTTN, ĐGTD
-- [ ] Giao diện web (Streamlit/Gradio)
+- [x] Giao diện chat trên trình duyệt
 - [ ] Script chấm tự động bộ câu hỏi kiểm thử

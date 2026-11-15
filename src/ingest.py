@@ -13,7 +13,7 @@ import sys
 import numpy as np
 
 import config
-from ollama_client import embed
+from ollama_client import OllamaError, embed
 
 BATCH = 16
 
@@ -42,9 +42,12 @@ def main():
     print(f"Tổng {len(chunks)} đoạn. Đang tạo vector bằng '{config.EMBED_MODEL}'...")
 
     vecs = []
-    for i in range(0, len(chunks), BATCH):
-        vecs.extend(embed([c["text"] for c in chunks[i:i + BATCH]]))
-        print(f"  {min(i + BATCH, len(chunks))}/{len(chunks)}")
+    try:
+        for i in range(0, len(chunks), BATCH):
+            vecs.extend(embed([c["text"] for c in chunks[i:i + BATCH]]))
+            print(f"  {min(i + BATCH, len(chunks))}/{len(chunks)}")
+    except OllamaError as e:
+        sys.exit(str(e))
 
     mat = np.asarray(vecs, dtype=np.float32)
     mat /= np.linalg.norm(mat, axis=1, keepdims=True)  # chuẩn hoá để dùng cosine

@@ -1,10 +1,13 @@
 """Gọi Ollama qua HTTP (không cần cài thư viện ollama)."""
 import json
-import sys
 
 import requests
 
 import config
+
+
+class OllamaError(Exception):
+    """Lỗi khi gọi Ollama, kèm thông báo tiếng Việt dễ hiểu."""
 
 
 def _post(path, payload, stream=False):
@@ -12,11 +15,11 @@ def _post(path, payload, stream=False):
         r = requests.post(f"{config.OLLAMA_URL}{path}", json=payload,
                           stream=stream, timeout=600)
     except requests.ConnectionError:
-        sys.exit(f"Không kết nối được Ollama tại {config.OLLAMA_URL}. "
+        raise OllamaError(f"Không kết nối được Ollama tại {config.OLLAMA_URL}. "
                  "Hãy mở ứng dụng Ollama hoặc chạy lệnh: ollama serve")
     if r.status_code == 404:
         model = payload.get("model")
-        sys.exit(f"Ollama chưa có model '{model}'. Chạy: ollama pull {model}")
+        raise OllamaError(f"Ollama chưa có model '{model}'. Chạy: ollama pull {model}")
     r.raise_for_status()
     return r
 
